@@ -17,6 +17,7 @@ const ChatInterface: React.FC = () => {
   const [selectedLevel, setSelectedLevel] = useState<'fresher' | 'experienced' | null>(null);
   const [selectedDomain, setSelectedDomain] = useState<string | null>(null);
   const [availableQuestions, setAvailableQuestions] = useState<Question[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const TOTAL_QUESTIONS = 5;
@@ -85,8 +86,11 @@ const ChatInterface: React.FC = () => {
   };
 
   const startSession = async (level: 'fresher' | 'experienced', domain: string) => {
+    setIsLoading(true);
     try {
+      console.log(`Starting session with level: ${level}, domain: ${domain}`);
       const session = await sessionService.createSession(level, domain);
+      console.log('Session created:', session);
       setCurrentSession(session);
       
       let questionsForSession = questions.filter(q => 
@@ -95,6 +99,7 @@ const ChatInterface: React.FC = () => {
       
       if (questionsForSession.length === 0) {
         addBotMessage("Sorry, no questions available for this combination. Please try a different selection.");
+        setIsLoading(false);
         return;
       }
 
@@ -123,19 +128,32 @@ const ChatInterface: React.FC = () => {
     } catch (error) {
       console.error('Error starting session:', error);
       addBotMessage("Sorry, there was an error starting the session. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleAnswer = async (answer: string, timeSpent: number) => {
-    if (!currentSession || !currentQuestion) return;
+    if (!currentSession || !currentQuestion) {
+      console.error('No current session or question');
+      return;
+    }
 
+    setIsLoading(true);
     try {
+      console.log('Submitting answer:', { answer, timeSpent, questionId: currentQuestion.id });
+      
       const evaluation = sessionService.evaluateAnswer(answer, currentQuestion.correctAnswer, currentQuestion);
       evaluation.timeSpent = timeSpent;
       
       const updatedSession = await sessionService.addAnswer(currentSession.id, evaluation);
-      if (!updatedSession) return;
+      if (!updatedSession) {
+        addBotMessage("Sorry, there was an error processing your answer. Please try again.");
+        setIsLoading(false);
+        return;
+      }
 
+      console.log('Updated session:', updatedSession);
       setCurrentSession(updatedSession);
       addUserMessage(answer);
 
@@ -163,11 +181,14 @@ const ChatInterface: React.FC = () => {
     } catch (error) {
       console.error('Error handling answer:', error);
       addBotMessage("Sorry, there was an error processing your answer. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const finishSession = async (session: UserSession) => {
     try {
+      console.log('Finishing session:', session.id);
       const finishedSession = await sessionService.updateSession(session.id, { endTime: new Date() });
       if (finishedSession) {
         setCurrentSession(finishedSession);
@@ -202,6 +223,7 @@ Based on your performance, we'll now determine your eligibility for the role. Pl
     setSelectedLevel(null);
     setSelectedDomain(null);
     setAvailableQuestions([]);
+    setIsLoading(false);
     
     setTimeout(() => {
       addBotMessage("Hi! 👋 Welcome back to the Interview Assessment Platform! Ready for another assessment? Let's select your experience level to begin.", true);
@@ -239,6 +261,13 @@ Based on your performance, we'll now determine your eligibility for the role. Pl
                   {messages.map((message) => (
                     <ChatMessage key={message.id} message={message} />
                   ))}
+                  {isLoading && (
+                    <div className="flex justify-center">
+                      <div className="bg-purple-100 text-purple-800 px-4 py-2 rounded-full text-sm font-medium animate-pulse">
+                        Processing...
+                      </div>
+                    </div>
+                  )}
                   <div ref={messagesEndRef} />
                 </div>
 
@@ -251,13 +280,15 @@ Based on your performance, we'll now determine your eligibility for the role. Pl
                         <div className="flex gap-4 justify-center">
                           <Button
                             onClick={() => handleLevelSelection('fresher')}
-                            className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white px-8 py-3 rounded-2xl font-bold shadow-lg transform hover:scale-105 transition-all duration-200"
+                            disabled={isLoading}
+                            className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white px-8 py-3 rounded-2xl font-bold shadow-lg transform hover:scale-105 transition-all duration-200 disabled:opacity-50"
                           >
                             🌱 Fresher
                           </Button>
                           <Button
                             onClick={() => handleLevelSelection('experienced')}
-                            className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white px-8 py-3 rounded-2xl font-bold shadow-lg transform hover:scale-105 transition-all duration-200"
+                            disabled={isLoading}
+                            className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white px-8 py-3 rounded-2xl font-bold shadow-lg transform hover:scale-105 transition-all duration-200 disabled:opacity-50"
                           >
                             🚀 Experienced
                           </Button>
@@ -271,14 +302,16 @@ Based on your performance, we'll now determine your eligibility for the role. Pl
                             <Button
                               key={domain}
                               onClick={() => handleDomainSelection(domain)}
-                              className="bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white px-4 py-3 rounded-xl font-semibold text-sm shadow-lg transform hover:scale-105 transition-all duration-200"
+                              disabled={isLoading}
+                              className="bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white px-4 py-3 rounded-xl font-semibold text-sm shadow-lg transform hover:scale-105 transition-all duration-200 disabled:opacity-50"
                             >
                               {domain}
                             </Button>
                           ))}
                           <Button
                             onClick={() => handleDomainSelection('All')}
-                            className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-4 py-3 rounded-xl font-semibold text-sm col-span-2 shadow-lg transform hover:scale-105 transition-all duration-200"
+                            disabled={isLoading}
+                            className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-4 py-3 rounded-xl font-semibold text-sm col-span-2 shadow-lg transform hover:scale-105 transition-all duration-200 disabled:opacity-50"
                           >
                             🎯 All Domains (Mixed)
                           </Button>
@@ -293,7 +326,8 @@ Based on your performance, we'll now determine your eligibility for the role. Pl
                   <div className="p-6 border-t border-purple-100 bg-gradient-to-r from-gray-50 to-gray-100">
                     <Button
                       onClick={restartChat}
-                      className="bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white px-6 py-3 rounded-xl font-semibold flex items-center gap-2 shadow-lg transform hover:scale-105 transition-all duration-200"
+                      disabled={isLoading}
+                      className="bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white px-6 py-3 rounded-xl font-semibold flex items-center gap-2 shadow-lg transform hover:scale-105 transition-all duration-200 disabled:opacity-50"
                     >
                       <RotateCcw className="w-4 h-4" />
                       Start New Session
@@ -305,7 +339,7 @@ Based on your performance, we'll now determine your eligibility for the role. Pl
 
             {/* Question/Score Section */}
             <div className="lg:col-span-1">
-              {gameState === 'playing' && currentQuestion && currentSession && (
+              {gameState === 'playing' && currentQuestion && currentSession && availableQuestions && (
                 <QuestionCard
                   question={currentQuestion}
                   onAnswer={handleAnswer}
@@ -314,7 +348,7 @@ Based on your performance, we'll now determine your eligibility for the role. Pl
                 />
               )}
 
-              {gameState === 'finished' && currentSession && (
+              {gameState === 'finished' && currentSession && availableQuestions && (
                 <ScoreDisplay
                   session={currentSession}
                   availableQuestions={availableQuestions}
