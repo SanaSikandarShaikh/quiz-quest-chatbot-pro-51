@@ -84,91 +84,102 @@ const ChatInterface: React.FC = () => {
     }, 500);
   };
 
-  const startSession = (level: 'fresher' | 'experienced', domain: string) => {
-    const session = sessionService.createSession(level, domain);
-    setCurrentSession(session);
-    
-    let questionsForSession = questions.filter(q => 
-      q.level === level && (domain === 'All' || q.domain === domain)
-    );
-    
-    if (questionsForSession.length === 0) {
-      addBotMessage("Sorry, no questions available for this combination. Please try a different selection.");
-      return;
-    }
-
-    // Ensure we have exactly 5 questions
-    questionsForSession = questionsForSession
-      .sort(() => Math.random() - 0.5)
-      .slice(0, TOTAL_QUESTIONS);
-    
-    // If we don't have enough questions, repeat some randomly
-    while (questionsForSession.length < TOTAL_QUESTIONS && questionsForSession.length > 0) {
-      const additionalQuestions = questions.filter(q => 
+  const startSession = async (level: 'fresher' | 'experienced', domain: string) => {
+    try {
+      const session = await sessionService.createSession(level, domain);
+      setCurrentSession(session);
+      
+      let questionsForSession = questions.filter(q => 
         q.level === level && (domain === 'All' || q.domain === domain)
-      ).sort(() => Math.random() - 0.5);
-      questionsForSession = [...questionsForSession, ...additionalQuestions].slice(0, TOTAL_QUESTIONS);
+      );
+      
+      if (questionsForSession.length === 0) {
+        addBotMessage("Sorry, no questions available for this combination. Please try a different selection.");
+        return;
+      }
+
+      // Ensure we have exactly 5 questions
+      questionsForSession = questionsForSession
+        .sort(() => Math.random() - 0.5)
+        .slice(0, TOTAL_QUESTIONS);
+      
+      // If we don't have enough questions, repeat some randomly
+      while (questionsForSession.length < TOTAL_QUESTIONS && questionsForSession.length > 0) {
+        const additionalQuestions = questions.filter(q => 
+          q.level === level && (domain === 'All' || q.domain === domain)
+        ).sort(() => Math.random() - 0.5);
+        questionsForSession = [...questionsForSession, ...additionalQuestions].slice(0, TOTAL_QUESTIONS);
+      }
+      
+      setAvailableQuestions(questionsForSession);
+      const firstQuestion = questionsForSession[0];
+      setCurrentQuestion(firstQuestion);
+      setGameState('playing');
+      
+      addSystemMessage(`Starting ${level} level ${domain} assessment - 5 questions total`);
+      setTimeout(() => {
+        addBotMessage(`Perfect! Let's begin your ${level} level ${domain} assessment. You will answer exactly 5 carefully selected questions to evaluate your skills. Each question is worth 10 points, for a total of 50 possible points. Take your time and answer thoughtfully. Ready? Here's question 1! 🚀`, true);
+      }, 1000);
+    } catch (error) {
+      console.error('Error starting session:', error);
+      addBotMessage("Sorry, there was an error starting the session. Please try again.");
     }
-    
-    setAvailableQuestions(questionsForSession);
-    const firstQuestion = questionsForSession[0];
-    setCurrentQuestion(firstQuestion);
-    setGameState('playing');
-    
-    addSystemMessage(`Starting ${level} level ${domain} assessment - 5 questions total`);
-    setTimeout(() => {
-      addBotMessage(`Perfect! Let's begin your ${level} level ${domain} assessment. You will answer exactly 5 carefully selected questions to evaluate your skills. Each question is worth 10 points, for a total of 50 possible points. Take your time and answer thoughtfully. Ready? Here's question 1! 🚀`, true);
-    }, 1000);
   };
 
-  const handleAnswer = (answer: string, timeSpent: number) => {
+  const handleAnswer = async (answer: string, timeSpent: number) => {
     if (!currentSession || !currentQuestion) return;
 
-    const evaluation = sessionService.evaluateAnswer(answer, currentQuestion.correctAnswer, currentQuestion);
-    evaluation.timeSpent = timeSpent;
-    
-    const updatedSession = sessionService.addAnswer(currentSession.id, evaluation);
-    if (!updatedSession) return;
-
-    setCurrentSession(updatedSession);
-    addUserMessage(answer);
-
-    setTimeout(() => {
-      const currentQuestionNumber = updatedSession.answers.length;
-      const totalQuestions = availableQuestions.length;
+    try {
+      const evaluation = sessionService.evaluateAnswer(answer, currentQuestion.correctAnswer, currentQuestion);
+      evaluation.timeSpent = timeSpent;
       
-      const resultMessage = evaluation.isCorrect 
-        ? `✅ Correct! You earned ${evaluation.points} points. Progress: ${currentQuestionNumber}/${totalQuestions}`
-        : `❌ Incorrect. The correct answer concept was: "${currentQuestion.correctAnswer}". Progress: ${currentQuestionNumber}/${totalQuestions}`;
-      
-      addBotMessage(resultMessage, true);
+      const updatedSession = await sessionService.addAnswer(currentSession.id, evaluation);
+      if (!updatedSession) return;
+
+      setCurrentSession(updatedSession);
+      addUserMessage(answer);
 
       setTimeout(() => {
-        // Check if there are more questions
-        if (currentQuestionNumber < totalQuestions) {
-          const nextQuestion = availableQuestions[currentQuestionNumber];
-          setCurrentQuestion(nextQuestion);
-          addBotMessage(`Moving to question ${currentQuestionNumber + 1} of ${totalQuestions}. Keep going! 📝`, true);
-        } else {
-          finishSession(updatedSession);
-        }
-      }, 1500);
-    }, 1000);
+        const currentQuestionNumber = updatedSession.answers.length;
+        const totalQuestions = availableQuestions.length;
+        
+        const resultMessage = evaluation.isCorrect 
+          ? `✅ Correct! You earned ${evaluation.points} points. Progress: ${currentQuestionNumber}/${totalQuestions}`
+          : `❌ Incorrect. The correct answer concept was: "${currentQuestion.correctAnswer}". Progress: ${currentQuestionNumber}/${totalQuestions}`;
+        
+        addBotMessage(resultMessage, true);
+
+        setTimeout(() => {
+          // Check if there are more questions
+          if (currentQuestionNumber < totalQuestions) {
+            const nextQuestion = availableQuestions[currentQuestionNumber];
+            setCurrentQuestion(nextQuestion);
+            addBotMessage(`Moving to question ${currentQuestionNumber + 1} of ${totalQuestions}. Keep going! 📝`, true);
+          } else {
+            finishSession(updatedSession);
+          }
+        }, 1500);
+      }, 1000);
+    } catch (error) {
+      console.error('Error handling answer:', error);
+      addBotMessage("Sorry, there was an error processing your answer. Please try again.");
+    }
   };
 
-  const finishSession = (session: UserSession) => {
-    const finishedSession = sessionService.updateSession(session.id, { endTime: new Date() });
-    if (finishedSession) {
-      setCurrentSession(finishedSession);
-    }
-    setGameState('finished');
-    setCurrentQuestion(null);
-    
-    const correctAnswers = session.answers.filter(a => a.isCorrect).length;
-    const percentage = Math.round((correctAnswers / 5) * 100);
-    
-    setTimeout(() => {
-      addBotMessage(`🎉 Assessment Complete! You've answered all 5 questions. 
+  const finishSession = async (session: UserSession) => {
+    try {
+      const finishedSession = await sessionService.updateSession(session.id, { endTime: new Date() });
+      if (finishedSession) {
+        setCurrentSession(finishedSession);
+      }
+      setGameState('finished');
+      setCurrentQuestion(null);
+      
+      const correctAnswers = session.answers.filter(a => a.isCorrect).length;
+      const percentage = Math.round((correctAnswers / 5) * 100);
+      
+      setTimeout(() => {
+        addBotMessage(`🎉 Assessment Complete! You've answered all 5 questions. 
 
 📊 Your Results:
 - Score: ${session.totalScore}/50 points
@@ -176,7 +187,11 @@ const ChatInterface: React.FC = () => {
 - Correct Answers: ${correctAnswers}/5
 
 Based on your performance, we'll now determine your eligibility for the role. Please review your detailed results below!`, true);
-    }, 500);
+      }, 500);
+    } catch (error) {
+      console.error('Error finishing session:', error);
+      addBotMessage("Session completed, but there was an error updating the final results.");
+    }
   };
 
   const restartChat = () => {
