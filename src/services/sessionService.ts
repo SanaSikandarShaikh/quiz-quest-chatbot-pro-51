@@ -1,26 +1,65 @@
 
 import { UserSession, UserAnswer, Question } from '../types';
+import { apiService } from './apiService';
 
 class SessionService {
   private sessions: UserSession[] = [];
 
-  createSession(level: 'fresher' | 'experienced', domain: string): UserSession {
-    const session: UserSession = {
-      id: `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      level,
-      domain,
-      currentQuestionIndex: 0,
-      answers: [],
-      totalScore: 0,
-      startTime: new Date(),
-    };
+  async createSession(level: 'fresher' | 'experienced', domain: string): Promise<UserSession> {
+    try {
+      // Try to create session via API first
+      const session = await apiService.createSession(level, domain);
+      
+      // Convert API response to match our UserSession type
+      const userSession: UserSession = {
+        ...session,
+        startTime: new Date(session.startTime),
+        endTime: session.endTime ? new Date(session.endTime) : undefined,
+      };
+      
+      this.sessions.push(userSession);
+      this.saveToLocalStorage();
+      return userSession;
+    } catch (error) {
+      console.error('Failed to create session via API, falling back to local:', error);
+      
+      // Fallback to local session creation
+      const session: UserSession = {
+        id: `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        level,
+        domain,
+        currentQuestionIndex: 0,
+        answers: [],
+        totalScore: 0,
+        startTime: new Date(),
+      };
 
-    this.sessions.push(session);
-    this.saveToLocalStorage();
-    return session;
+      this.sessions.push(session);
+      this.saveToLocalStorage();
+      return session;
+    }
   }
 
-  updateSession(sessionId: string, updates: Partial<UserSession>): UserSession | null {
+  async updateSession(sessionId: string, updates: Partial<UserSession>): Promise<UserSession | null> {
+    try {
+      // Try to update via API first
+      const updatedSession = await apiService.updateSession(sessionId, updates);
+      
+      const sessionIndex = this.sessions.findIndex(s => s.id === sessionId);
+      if (sessionIndex !== -1) {
+        this.sessions[sessionIndex] = {
+          ...updatedSession,
+          startTime: new Date(updatedSession.startTime),
+          endTime: updatedSession.endTime ? new Date(updatedSession.endTime) : undefined,
+        };
+        this.saveToLocalStorage();
+        return this.sessions[sessionIndex];
+      }
+    } catch (error) {
+      console.error('Failed to update session via API, falling back to local:', error);
+    }
+    
+    // Fallback to local update
     const sessionIndex = this.sessions.findIndex(s => s.id === sessionId);
     if (sessionIndex === -1) return null;
 
@@ -29,7 +68,29 @@ class SessionService {
     return this.sessions[sessionIndex];
   }
 
-  addAnswer(sessionId: string, answer: UserAnswer): UserSession | null {
+  async addAnswer(sessionId: string, answer: UserAnswer): Promise<UserSession | null> {
+    try {
+      // Try to add answer via API
+      const response = await apiService.addAnswer(
+        sessionId, 
+        answer.questionId, 
+        answer.userAnswer, 
+        answer.timeSpent
+      );
+      
+      const session = this.sessions.find(s => s.id === sessionId);
+      if (session) {
+        session.answers.push(response.answer);
+        session.totalScore = response.session.totalScore;
+        session.currentQuestionIndex = response.session.currentQuestionIndex;
+        this.saveToLocalStorage();
+        return session;
+      }
+    } catch (error) {
+      console.error('Failed to add answer via API, falling back to local:', error);
+    }
+    
+    // Fallback to local answer handling
     const session = this.sessions.find(s => s.id === sessionId);
     if (!session) return null;
 
@@ -69,12 +130,25 @@ class SessionService {
       questionId: question.id,
       userAnswer,
       isCorrect,
-      points: isCorrect ? question.points : 0, // Only award points for correct answers
-      timeSpent: 0, // Will be set when called
+      points: isCorrect ? question.points : 0,
+      timeSpent: 0,
     };
   }
 
-  getSession(sessionId: string): UserSession | null {
+  async getSession(sessionId: string): Promise<UserSession | null> {
+    try {
+      // Try to get session from API first
+      const session = await apiService.getSession(sessionId);
+      return {
+        ...session,
+        startTime: new Date(session.startTime),
+        endTime: session.endTime ? new Date(session.endTime) : undefined,
+      };
+    } catch (error) {
+      console.error('Failed to get session from API, falling back to local:', error);
+    }
+    
+    // Fallback to local session
     return this.sessions.find(s => s.id === sessionId) || null;
   }
 
