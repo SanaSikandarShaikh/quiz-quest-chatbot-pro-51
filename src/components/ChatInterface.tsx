@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { ChatMessage as ChatMessageType, UserSession, Question } from '../types';
 import { questions, domains } from '../data/questions';
@@ -69,13 +68,13 @@ const ChatInterface: React.FC = () => {
     setSelectedLevel(level);
     addUserMessage(`I'm a ${level}`);
     setTimeout(() => {
-      addBotMessage(`Great! You've selected ${level} level. Now, please choose a domain you'd like to practice:`, true);
+      addBotMessage(`Great! You've selected ${level} level. Now, please choose a domain you'd like to be assessed on:`, true);
     }, 500);
   };
 
   const handleDomainSelection = (domain: string) => {
     setSelectedDomain(domain);
-    addUserMessage(`I want to practice ${domain}`);
+    addUserMessage(`I want to be assessed on ${domain}`);
     
     setTimeout(() => {
       if (selectedLevel) {
@@ -97,19 +96,27 @@ const ChatInterface: React.FC = () => {
       return;
     }
 
-    // Shuffle questions and take up to TOTAL_QUESTIONS
+    // Ensure we have exactly 20 questions
     questionsForSession = questionsForSession
       .sort(() => Math.random() - 0.5)
       .slice(0, TOTAL_QUESTIONS);
+    
+    // If we don't have enough questions, repeat some randomly
+    while (questionsForSession.length < TOTAL_QUESTIONS && questionsForSession.length > 0) {
+      const additionalQuestions = questions.filter(q => 
+        q.level === level && (domain === 'All' || q.domain === domain)
+      ).sort(() => Math.random() - 0.5);
+      questionsForSession = [...questionsForSession, ...additionalQuestions].slice(0, TOTAL_QUESTIONS);
+    }
     
     setAvailableQuestions(questionsForSession);
     const firstQuestion = questionsForSession[0];
     setCurrentQuestion(firstQuestion);
     setGameState('playing');
     
-    addSystemMessage(`Starting ${level} level ${domain} interview practice - ${questionsForSession.length} questions`);
+    addSystemMessage(`Starting ${level} level ${domain} assessment - 20 questions total`);
     setTimeout(() => {
-      addBotMessage(`Perfect! Let's begin with your ${level} level ${domain} practice session. I'll present you with ${questionsForSession.length} questions to simulate a real interview experience. Take your time with each answer. Ready? Here's your first question! 🚀`, true);
+      addBotMessage(`Perfect! Let's begin your ${level} level ${domain} assessment. You will answer exactly 20 questions to evaluate your eligibility for this role. Each question is worth 10 points, for a total of 200 possible points. Take your time and answer thoughtfully. Ready? Here's question 1! 🚀`, true);
     }, 1000);
   };
 
@@ -129,15 +136,14 @@ const ChatInterface: React.FC = () => {
       const currentQuestionNumber = updatedSession.answers.length;
       const totalQuestions = availableQuestions.length;
       
-      // Don't show correct answer immediately during interview
-      addBotMessage(`Question ${currentQuestionNumber} completed! Moving to the next question...`, true);
+      addBotMessage(`Question ${currentQuestionNumber} submitted! Progress: ${currentQuestionNumber}/${totalQuestions}`, true);
 
       setTimeout(() => {
         // Check if there are more questions
         if (currentQuestionNumber < totalQuestions) {
           const nextQuestion = availableQuestions[currentQuestionNumber];
           setCurrentQuestion(nextQuestion);
-          addBotMessage(`Question ${currentQuestionNumber + 1} of ${totalQuestions}. Keep going! 📝`, true);
+          addBotMessage(`Moving to question ${currentQuestionNumber + 1} of ${totalQuestions}. Keep going! 📝`, true);
         } else {
           finishSession(updatedSession);
         }
@@ -153,8 +159,18 @@ const ChatInterface: React.FC = () => {
     setGameState('finished');
     setCurrentQuestion(null);
     
+    const correctAnswers = session.answers.filter(a => a.isCorrect).length;
+    const percentage = Math.round((correctAnswers / 20) * 100);
+    
     setTimeout(() => {
-      addBotMessage("🎉 Congratulations! You've completed your interview practice session. Let's review your performance and the correct answers:", true);
+      addBotMessage(`🎉 Assessment Complete! You've answered all 20 questions. 
+
+📊 Your Results:
+- Score: ${session.totalScore}/200 points
+- Accuracy: ${percentage}%
+- Correct Answers: ${correctAnswers}/20
+
+Based on your performance, we'll now determine your eligibility for the role. Please review your detailed results below!`, true);
     }, 500);
   };
 
@@ -168,7 +184,7 @@ const ChatInterface: React.FC = () => {
     setAvailableQuestions([]);
     
     setTimeout(() => {
-      addBotMessage("Hi! 👋 Welcome back to the Interview Questions Generator! Ready for another practice session? Let's select your experience level.", true);
+      addBotMessage("Hi! 👋 Welcome back to the Interview Assessment Platform! Ready for another assessment? Let's select your experience level to begin.", true);
     }, 500);
   };
 
