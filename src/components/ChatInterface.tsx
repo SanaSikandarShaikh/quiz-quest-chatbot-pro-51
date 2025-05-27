@@ -16,7 +16,10 @@ const ChatInterface: React.FC = () => {
   const [gameState, setGameState] = useState<'setup' | 'playing' | 'finished'>('setup');
   const [selectedLevel, setSelectedLevel] = useState<'fresher' | 'experienced' | null>(null);
   const [selectedDomain, setSelectedDomain] = useState<string | null>(null);
+  const [availableQuestions, setAvailableQuestions] = useState<Question[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const TOTAL_QUESTIONS = 20;
 
   useEffect(() => {
     sessionService.loadFromLocalStorage();
@@ -85,22 +88,28 @@ const ChatInterface: React.FC = () => {
     const session = sessionService.createSession(level, domain);
     setCurrentSession(session);
     
-    const availableQuestions = questions.filter(q => 
+    let questionsForSession = questions.filter(q => 
       q.level === level && (domain === 'All' || q.domain === domain)
     );
     
-    if (availableQuestions.length === 0) {
+    if (questionsForSession.length === 0) {
       addBotMessage("Sorry, no questions available for this combination. Please try a different selection.");
       return;
     }
 
-    const firstQuestion = availableQuestions[0];
+    // Shuffle questions and take up to TOTAL_QUESTIONS
+    questionsForSession = questionsForSession
+      .sort(() => Math.random() - 0.5)
+      .slice(0, TOTAL_QUESTIONS);
+    
+    setAvailableQuestions(questionsForSession);
+    const firstQuestion = questionsForSession[0];
     setCurrentQuestion(firstQuestion);
     setGameState('playing');
     
-    addSystemMessage(`Starting ${level} level ${domain} interview practice`);
+    addSystemMessage(`Starting ${level} level ${domain} interview practice - ${questionsForSession.length} questions`);
     setTimeout(() => {
-      addBotMessage(`Perfect! Let's begin with your ${level} level ${domain} practice session. I'll present you with questions and you can type your answers. Ready? Here's your first question! 🚀`, true);
+      addBotMessage(`Perfect! Let's begin with your ${level} level ${domain} practice session. I'll present you with ${questionsForSession.length} questions to simulate a real interview experience. Take your time with each answer. Ready? Here's your first question! 🚀`, true);
     }, 1000);
   };
 
@@ -117,27 +126,22 @@ const ChatInterface: React.FC = () => {
     addUserMessage(answer);
 
     setTimeout(() => {
-      if (evaluation.isCorrect) {
-        addBotMessage(`Excellent! ✅ That's correct! You earned ${evaluation.points} points. ${currentQuestion.correctAnswer}`, true);
-      } else {
-        addBotMessage(`Good attempt! ❌ Here's the correct answer: ${currentQuestion.correctAnswer}. Keep practicing!`, true);
-      }
+      const currentQuestionNumber = updatedSession.answers.length;
+      const totalQuestions = availableQuestions.length;
+      
+      // Don't show correct answer immediately during interview
+      addBotMessage(`Question ${currentQuestionNumber} completed! Moving to the next question...`, true);
 
       setTimeout(() => {
-        const availableQuestions = questions.filter(q => 
-          q.level === updatedSession.level && 
-          (selectedDomain === 'All' || q.domain === selectedDomain) &&
-          !updatedSession.answers.some(a => a.questionId === q.id)
-        );
-
-        if (availableQuestions.length > 0 && updatedSession.answers.length < 5) {
-          const nextQuestion = availableQuestions[Math.floor(Math.random() * availableQuestions.length)];
+        // Check if there are more questions
+        if (currentQuestionNumber < totalQuestions) {
+          const nextQuestion = availableQuestions[currentQuestionNumber];
           setCurrentQuestion(nextQuestion);
-          addBotMessage("Great! Let's continue with the next question. 📝", true);
+          addBotMessage(`Question ${currentQuestionNumber + 1} of ${totalQuestions}. Keep going! 📝`, true);
         } else {
           finishSession(updatedSession);
         }
-      }, 2000);
+      }, 1500);
     }, 1000);
   };
 
@@ -150,7 +154,7 @@ const ChatInterface: React.FC = () => {
     setCurrentQuestion(null);
     
     setTimeout(() => {
-      addBotMessage("Congratulations! 🎉 You've completed your interview practice session. Here are your results:", true);
+      addBotMessage("🎉 Congratulations! You've completed your interview practice session. Let's review your performance and the correct answers:", true);
     }, 500);
   };
 
@@ -161,6 +165,7 @@ const ChatInterface: React.FC = () => {
     setGameState('setup');
     setSelectedLevel(null);
     setSelectedDomain(null);
+    setAvailableQuestions([]);
     
     setTimeout(() => {
       addBotMessage("Hi! 👋 Welcome back to the Interview Questions Generator! Ready for another practice session? Let's select your experience level.", true);
@@ -257,13 +262,14 @@ const ChatInterface: React.FC = () => {
                   question={currentQuestion}
                   onAnswer={handleAnswer}
                   questionNumber={currentSession.answers.length + 1}
-                  totalQuestions={5}
+                  totalQuestions={availableQuestions.length}
                 />
               )}
 
               {gameState === 'finished' && currentSession && (
                 <ScoreDisplay
                   session={currentSession}
+                  availableQuestions={availableQuestions}
                   onRestart={restartChat}
                 />
               )}
@@ -282,11 +288,11 @@ const ChatInterface: React.FC = () => {
                     </div>
                     <div className="flex items-start space-x-3">
                       <div className="w-6 h-6 bg-purple-500 text-white rounded-full flex items-center justify-center text-sm font-semibold">3</div>
-                      <p>Answer questions and get instant feedback</p>
+                      <p>Answer up to 20 questions like a real interview</p>
                     </div>
                     <div className="flex items-start space-x-3">
                       <div className="w-6 h-6 bg-purple-500 text-white rounded-full flex items-center justify-center text-sm font-semibold">4</div>
-                      <p>Review your performance and improve</p>
+                      <p>Review your complete performance and correct answers</p>
                     </div>
                   </div>
                 </div>

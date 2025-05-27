@@ -1,15 +1,18 @@
 
-import React from 'react';
-import { UserSession } from '../types';
-import { Trophy, Target, Clock, TrendingUp } from 'lucide-react';
+import React, { useState } from 'react';
+import { UserSession, Question } from '../types';
+import { Trophy, Target, Clock, TrendingUp, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface ScoreDisplayProps {
   session: UserSession;
+  availableQuestions: Question[];
   onRestart: () => void;
 }
 
-const ScoreDisplay: React.FC<ScoreDisplayProps> = ({ session, onRestart }) => {
+const ScoreDisplay: React.FC<ScoreDisplayProps> = ({ session, availableQuestions, onRestart }) => {
+  const [showDetailedReview, setShowDetailedReview] = useState(false);
+  
   const totalQuestions = session.answers.length;
   const correctAnswers = session.answers.filter(answer => answer.isCorrect).length;
   const percentage = totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0;
@@ -32,13 +35,17 @@ const ScoreDisplay: React.FC<ScoreDisplayProps> = ({ session, onRestart }) => {
     return `${mins}m ${secs}s`;
   };
 
+  const getQuestionById = (questionId: number): Question | undefined => {
+    return availableQuestions.find(q => q.id === questionId);
+  };
+
   return (
     <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8 max-w-4xl mx-auto">
       <div className="text-center mb-8">
         <div className="w-20 h-20 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
           <Trophy className="w-10 h-10 text-white" />
         </div>
-        <h2 className="text-3xl font-bold text-gray-800 mb-2">Session Complete!</h2>
+        <h2 className="text-3xl font-bold text-gray-800 mb-2">Interview Complete!</h2>
         <p className={`text-xl font-semibold ${performance.color}`}>{performance.message}</p>
       </div>
 
@@ -94,35 +101,79 @@ const ScoreDisplay: React.FC<ScoreDisplayProps> = ({ session, onRestart }) => {
         </div>
       </div>
 
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold text-gray-800">Question Breakdown:</h3>
-        {session.answers.map((answer, index) => (
-          <div key={answer.questionId} className={`p-4 rounded-lg border-l-4 ${
-            answer.isCorrect 
-              ? 'bg-green-50 border-green-400' 
-              : 'bg-red-50 border-red-400'
-          }`}>
-            <div className="flex justify-between items-center">
-              <span className="font-medium">Question {index + 1}</span>
-              <div className="flex items-center space-x-4">
-                <span className={`text-sm font-semibold ${
-                  answer.isCorrect ? 'text-green-600' : 'text-red-600'
-                }`}>
-                  {answer.isCorrect ? '✓ Correct' : '✗ Incorrect'}
-                </span>
-                <span className="text-sm text-gray-600">+{answer.points} pts</span>
+      <div className="mb-8">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-semibold text-gray-800">Interview Review:</h3>
+          <Button
+            onClick={() => setShowDetailedReview(!showDetailedReview)}
+            variant="outline"
+            className="flex items-center gap-2"
+          >
+            {showDetailedReview ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            {showDetailedReview ? 'Hide Details' : 'Show Details'}
+          </Button>
+        </div>
+
+        <div className="space-y-4">
+          {session.answers.map((answer, index) => {
+            const question = getQuestionById(answer.questionId);
+            return (
+              <div key={answer.questionId} className={`p-4 rounded-lg border-l-4 ${
+                answer.isCorrect 
+                  ? 'bg-green-50 border-green-400' 
+                  : 'bg-red-50 border-red-400'
+              }`}>
+                <div className="flex justify-between items-start mb-2">
+                  <span className="font-medium">Question {index + 1}</span>
+                  <div className="flex items-center space-x-4">
+                    <span className={`text-sm font-semibold ${
+                      answer.isCorrect ? 'text-green-600' : 'text-red-600'
+                    }`}>
+                      {answer.isCorrect ? '✓ Correct' : '✗ Incorrect'}
+                    </span>
+                    <span className="text-sm text-gray-600">+{answer.points} pts</span>
+                  </div>
+                </div>
+                
+                {showDetailedReview && question && (
+                  <div className="mt-3 space-y-3">
+                    <div>
+                      <p className="text-sm font-medium text-gray-700 mb-1">Question:</p>
+                      <p className="text-sm text-gray-600 bg-white p-3 rounded border">
+                        {question.question}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-700 mb-1">Your Answer:</p>
+                      <p className="text-sm text-gray-600 bg-white p-3 rounded border">
+                        {answer.userAnswer}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-700 mb-1">Correct Answer:</p>
+                      <p className="text-sm text-gray-600 bg-white p-3 rounded border">
+                        {question.correctAnswer}
+                      </p>
+                    </div>
+                    <div className="flex justify-between text-xs text-gray-500">
+                      <span>Domain: {question.domain}</span>
+                      <span>Level: {question.level}</span>
+                      <span>Time: {formatTime(answer.timeSpent)}</span>
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
-          </div>
-        ))}
+            );
+          })}
+        </div>
       </div>
 
-      <div className="flex justify-center mt-8">
+      <div className="flex justify-center">
         <Button
           onClick={onRestart}
           className="bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white px-8 py-3 rounded-lg font-semibold"
         >
-          Start New Session
+          Start New Interview
         </Button>
       </div>
     </div>
