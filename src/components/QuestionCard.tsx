@@ -22,18 +22,31 @@ const QuestionCard: React.FC<QuestionCardProps> = ({
   const [timeSpent, setTimeSpent] = useState(0);
   const [isSubmitted, setIsSubmitted] = useState(false);
 
+  // Reset state when question changes
+  useEffect(() => {
+    setAnswer('');
+    setTimeSpent(0);
+    setIsSubmitted(false);
+  }, [question.id]);
+
   useEffect(() => {
     const timer = setInterval(() => {
-      setTimeSpent(prev => prev + 1);
+      if (!isSubmitted) {
+        setTimeSpent(prev => prev + 1);
+      }
     }, 1000);
 
     return () => clearInterval(timer);
-  }, []);
+  }, [isSubmitted]);
 
   const handleSubmit = () => {
     if (answer.trim()) {
       onAnswer(answer, timeSpent);
       setIsSubmitted(true);
+      // Auto-reset after a short delay to prepare for next question
+      setTimeout(() => {
+        setIsSubmitted(false);
+      }, 2000);
     }
   };
 
@@ -100,7 +113,7 @@ const QuestionCard: React.FC<QuestionCardProps> = ({
       ) : (
         <div className="bg-green-50 border border-green-200 rounded-lg p-6">
           <h4 className="text-green-800 font-semibold mb-2">Answer Submitted!</h4>
-          <p className="text-green-700">Your answer has been recorded and will be evaluated.</p>
+          <p className="text-green-700">Your answer has been recorded. Loading next question...</p>
         </div>
       )}
     </div>
