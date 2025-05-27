@@ -42,21 +42,34 @@ class SessionService {
   }
 
   evaluateAnswer(userAnswer: string, correctAnswer: string, question: Question): UserAnswer {
-    // Simple evaluation logic - in a real app, this would be more sophisticated
+    // Enhanced evaluation logic for better accuracy
     const normalizedUserAnswer = userAnswer.toLowerCase().trim();
     const normalizedCorrectAnswer = correctAnswer.toLowerCase().trim();
     
-    // Check if user answer contains key concepts from correct answer
-    const keyWords = normalizedCorrectAnswer.split(' ').filter(word => word.length > 3);
+    // Extract key concepts from correct answer (words longer than 3 characters)
+    const keyWords = normalizedCorrectAnswer
+      .split(/[\s,.-]+/)
+      .filter(word => word.length > 3)
+      .filter(word => !['that', 'this', 'with', 'from', 'they', 'have', 'been', 'will', 'when', 'where', 'what', 'which', 'while', 'each', 'their', 'there', 'then', 'than', 'only', 'also', 'into', 'like', 'over', 'just', 'some', 'many', 'more', 'such', 'very', 'well', 'used', 'make', 'work', 'other', 'first', 'after', 'through'].includes(word));
+    
+    // Count matching key concepts in user answer
     const matchingWords = keyWords.filter(word => normalizedUserAnswer.includes(word));
     
-    const isCorrect = matchingWords.length >= Math.ceil(keyWords.length * 0.3); // 30% match threshold
+    // Calculate match percentage - require at least 40% of key concepts to be mentioned
+    const matchPercentage = keyWords.length > 0 ? matchingWords.length / keyWords.length : 0;
+    const isCorrect = matchPercentage >= 0.4;
+    
+    console.log(`Question: ${question.question}`);
+    console.log(`Key words: ${keyWords.join(', ')}`);
+    console.log(`Matching words: ${matchingWords.join(', ')}`);
+    console.log(`Match percentage: ${matchPercentage}`);
+    console.log(`Is correct: ${isCorrect}`);
     
     return {
       questionId: question.id,
       userAnswer,
       isCorrect,
-      points: isCorrect ? question.points : 0,
+      points: isCorrect ? question.points : 0, // Only award points for correct answers
       timeSpent: 0, // Will be set when called
     };
   }

@@ -1,7 +1,6 @@
-
 import React, { useState } from 'react';
 import { UserSession, Question } from '../types';
-import { Trophy, Target, Clock, TrendingUp, Eye, EyeOff, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { Trophy, Target, Clock, TrendingUp, Eye, EyeOff, CheckCircle, XCircle, AlertCircle, Sparkles, Award } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface ScoreDisplayProps {
@@ -23,34 +22,34 @@ const ScoreDisplay: React.FC<ScoreDisplayProps> = ({ session, availableQuestions
   const getEligibilityStatus = () => {
     if (percentage >= 80) return { 
       status: "Highly Eligible", 
-      message: "Congratulations! You've demonstrated exceptional knowledge and are highly qualified for this role.",
+      message: "Outstanding! You've demonstrated exceptional knowledge and are highly qualified for this role.",
       color: "text-green-600",
-      bgColor: "bg-green-50",
-      borderColor: "border-green-200",
+      bgColor: "bg-gradient-to-r from-green-50 to-emerald-50",
+      borderColor: "border-green-300",
       icon: CheckCircle
     };
-    if (percentage >= 65) return { 
+    if (percentage >= 60) return { 
       status: "Eligible", 
       message: "Well done! You've shown good understanding and meet the requirements for this role.",
       color: "text-blue-600",
-      bgColor: "bg-blue-50",
-      borderColor: "border-blue-200",
+      bgColor: "bg-gradient-to-r from-blue-50 to-indigo-50",
+      borderColor: "border-blue-300",
       icon: CheckCircle
     };
-    if (percentage >= 45) return { 
+    if (percentage >= 40) return { 
       status: "Partially Eligible", 
       message: "You have potential but may need additional preparation. Consider reviewing the topics and trying again.",
       color: "text-yellow-600",
-      bgColor: "bg-yellow-50",
-      borderColor: "border-yellow-200",
+      bgColor: "bg-gradient-to-r from-yellow-50 to-orange-50",
+      borderColor: "border-yellow-300",
       icon: AlertCircle
     };
     return { 
       status: "Not Eligible", 
       message: "More preparation is needed. We recommend studying the core concepts and retaking the assessment.",
       color: "text-red-600",
-      bgColor: "bg-red-50",
-      borderColor: "border-red-200",
+      bgColor: "bg-gradient-to-r from-red-50 to-pink-50",
+      borderColor: "border-red-300",
       icon: XCircle
     };
   };
@@ -76,96 +75,112 @@ const ScoreDisplay: React.FC<ScoreDisplayProps> = ({ session, availableQuestions
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8 max-w-4xl mx-auto">
+    <div className="bg-white/90 backdrop-blur-sm rounded-3xl shadow-2xl border border-purple-100 p-8 max-w-4xl mx-auto">
+      {/* Header Section */}
       <div className="text-center mb-8">
-        <div className="w-20 h-20 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
-          <Trophy className="w-10 h-10 text-white" />
+        <div className="relative">
+          <div className="w-24 h-24 bg-gradient-to-r from-purple-500 via-pink-500 to-blue-500 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
+            <Trophy className="w-12 h-12 text-white" />
+          </div>
+          <Sparkles className="absolute top-0 right-1/3 w-6 h-6 text-yellow-400 animate-bounce" />
+          <Sparkles className="absolute bottom-0 left-1/3 w-4 h-4 text-purple-400 animate-bounce delay-300" />
         </div>
-        <h2 className="text-3xl font-bold text-gray-800 mb-2">Assessment Complete!</h2>
-        <p className={`text-xl font-semibold ${performance.color} mb-4`}>{performance.message}</p>
-        <p className="text-gray-600">You have successfully completed all {totalQuestions} questions</p>
+        <h2 className="text-4xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 bg-clip-text text-transparent mb-2">
+          Assessment Complete!
+        </h2>
+        <p className={`text-2xl font-bold ${performance.color} mb-4`}>{performance.message}</p>
+        <p className="text-gray-600 font-medium">You have successfully completed all {totalQuestions} questions</p>
       </div>
 
       {/* Eligibility Status */}
-      <div className={`${eligibility.bgColor} ${eligibility.borderColor} border-2 rounded-xl p-6 mb-8`}>
+      <div className={`${eligibility.bgColor} ${eligibility.borderColor} border-3 rounded-2xl p-6 mb-8 shadow-lg`}>
         <div className="flex items-center justify-center mb-4">
-          <eligibility.icon className={`w-8 h-8 ${eligibility.color} mr-3`} />
-          <h3 className={`text-2xl font-bold ${eligibility.color}`}>
+          <eligibility.icon className={`w-10 h-10 ${eligibility.color} mr-3`} />
+          <h3 className={`text-3xl font-bold ${eligibility.color}`}>
             {eligibility.status}
           </h3>
         </div>
-        <p className={`text-center ${eligibility.color} font-medium`}>
+        <p className={`text-center ${eligibility.color} font-semibold text-lg`}>
           {eligibility.message}
         </p>
       </div>
 
+      {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl p-6 text-center">
-          <div className="w-12 h-12 bg-purple-500 rounded-full flex items-center justify-center mx-auto mb-3">
-            <Trophy className="w-6 h-6 text-white" />
+        <div className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-2xl p-6 text-center shadow-lg border border-purple-200">
+          <div className="w-14 h-14 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full flex items-center justify-center mx-auto mb-3">
+            <Award className="w-7 h-7 text-white" />
           </div>
-          <h3 className="text-2xl font-bold text-purple-600">{session.totalScore}</h3>
-          <p className="text-gray-600">Total Score</p>
-          <p className="text-xs text-gray-500 mt-1">out of {availableQuestions.length * 10} possible</p>
+          <h3 className="text-3xl font-bold text-purple-600">{session.totalScore}</h3>
+          <p className="text-gray-600 font-medium">Total Score</p>
+          <p className="text-xs text-gray-500 mt-1">out of {totalQuestions * 10} possible</p>
         </div>
 
-        <div className="bg-gradient-to-r from-green-50 to-teal-50 rounded-xl p-6 text-center">
-          <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-3">
-            <Target className="w-6 h-6 text-white" />
+        <div className="bg-gradient-to-br from-green-50 to-teal-50 rounded-2xl p-6 text-center shadow-lg border border-green-200">
+          <div className="w-14 h-14 bg-gradient-to-r from-green-500 to-teal-500 rounded-full flex items-center justify-center mx-auto mb-3">
+            <Target className="w-7 h-7 text-white" />
           </div>
-          <h3 className="text-2xl font-bold text-green-600">{percentage}%</h3>
-          <p className="text-gray-600">Accuracy</p>
-          <p className="text-xs text-gray-500 mt-1">Pass threshold: 65%</p>
+          <h3 className="text-3xl font-bold text-green-600">{percentage}%</h3>
+          <p className="text-gray-600 font-medium">Accuracy</p>
+          <p className="text-xs text-gray-500 mt-1">Pass threshold: 60%</p>
         </div>
 
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 text-center">
-          <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-3">
-            <TrendingUp className="w-6 h-6 text-white" />
+        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 text-center shadow-lg border border-blue-200">
+          <div className="w-14 h-14 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full flex items-center justify-center mx-auto mb-3">
+            <TrendingUp className="w-7 h-7 text-white" />
           </div>
-          <h3 className="text-2xl font-bold text-blue-600">{correctAnswers}/{totalQuestions}</h3>
-          <p className="text-gray-600">Correct</p>
+          <h3 className="text-3xl font-bold text-blue-600">{correctAnswers}/{totalQuestions}</h3>
+          <p className="text-gray-600 font-medium">Correct</p>
           <p className="text-xs text-gray-500 mt-1">Questions answered correctly</p>
         </div>
 
-        <div className="bg-gradient-to-r from-orange-50 to-red-50 rounded-xl p-6 text-center">
-          <div className="w-12 h-12 bg-orange-500 rounded-full flex items-center justify-center mx-auto mb-3">
-            <Clock className="w-6 h-6 text-white" />
+        <div className="bg-gradient-to-br from-orange-50 to-red-50 rounded-2xl p-6 text-center shadow-lg border border-orange-200">
+          <div className="w-14 h-14 bg-gradient-to-r from-orange-500 to-red-500 rounded-full flex items-center justify-center mx-auto mb-3">
+            <Clock className="w-7 h-7 text-white" />
           </div>
-          <h3 className="text-2xl font-bold text-orange-600">{formatTime(totalTime)}</h3>
-          <p className="text-gray-600">Time Taken</p>
+          <h3 className="text-3xl font-bold text-orange-600">{formatTime(totalTime)}</h3>
+          <p className="text-gray-600 font-medium">Time Taken</p>
           <p className="text-xs text-gray-500 mt-1">Average: {formatTime(Math.round(totalTime / totalQuestions))} per question</p>
         </div>
       </div>
 
-      <div className="bg-gray-50 rounded-xl p-6 mb-8">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">Assessment Details</h3>
+      {/* Assessment Details */}
+      <div className="bg-gradient-to-r from-gray-50 to-purple-50 rounded-2xl p-6 mb-8 border border-gray-200">
+        <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
+          <Sparkles className="w-5 h-5 mr-2 text-purple-500" />
+          Assessment Details
+        </h3>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
-          <div>
-            <span className="font-medium text-gray-600">Level:</span>
-            <span className="ml-2 capitalize">{session.level}</span>
+          <div className="bg-white p-3 rounded-lg">
+            <span className="font-semibold text-gray-600">Level:</span>
+            <span className="ml-2 capitalize font-medium">{session.level}</span>
           </div>
-          <div>
-            <span className="font-medium text-gray-600">Domain:</span>
-            <span className="ml-2">{session.domain}</span>
+          <div className="bg-white p-3 rounded-lg">
+            <span className="font-semibold text-gray-600">Domain:</span>
+            <span className="ml-2 font-medium">{session.domain}</span>
           </div>
-          <div>
-            <span className="font-medium text-gray-600">Questions:</span>
-            <span className="ml-2">{totalQuestions} / 20</span>
+          <div className="bg-white p-3 rounded-lg">
+            <span className="font-semibold text-gray-600">Questions:</span>
+            <span className="ml-2 font-medium">{totalQuestions} / 5</span>
           </div>
-          <div>
-            <span className="font-medium text-gray-600">Status:</span>
-            <span className={`ml-2 font-semibold ${eligibility.color}`}>{eligibility.status}</span>
+          <div className="bg-white p-3 rounded-lg">
+            <span className="font-semibold text-gray-600">Status:</span>
+            <span className={`ml-2 font-bold ${eligibility.color}`}>{eligibility.status}</span>
           </div>
         </div>
       </div>
 
+      {/* Answer Review Section */}
       <div className="mb-8">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold text-gray-800">Complete Answer Review:</h3>
+          <h3 className="text-xl font-bold text-gray-800 flex items-center">
+            <Eye className="w-5 h-5 mr-2 text-purple-500" />
+            Complete Answer Review:
+          </h3>
           <Button
             onClick={() => setShowDetailedReview(!showDetailedReview)}
             variant="outline"
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 border-2 border-purple-300 hover:bg-purple-50 rounded-xl"
           >
             {showDetailedReview ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             {showDetailedReview ? 'Hide Details' : 'Show Details'}
@@ -176,20 +191,20 @@ const ScoreDisplay: React.FC<ScoreDisplayProps> = ({ session, availableQuestions
           {session.answers.map((answer, index) => {
             const question = getQuestionById(answer.questionId);
             return (
-              <div key={answer.questionId} className={`p-4 rounded-lg border-l-4 ${
+              <div key={answer.questionId} className={`p-4 rounded-2xl border-l-4 shadow-lg ${
                 answer.isCorrect 
-                  ? 'bg-green-50 border-green-400' 
-                  : 'bg-red-50 border-red-400'
+                  ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-400' 
+                  : 'bg-gradient-to-r from-red-50 to-pink-50 border-red-400'
               }`}>
                 <div className="flex justify-between items-start mb-2">
-                  <span className="font-medium">Question {index + 1} of 20</span>
+                  <span className="font-bold text-lg">Question {index + 1} of 5</span>
                   <div className="flex items-center space-x-4">
-                    <span className={`text-sm font-semibold ${
-                      answer.isCorrect ? 'text-green-600' : 'text-red-600'
+                    <span className={`text-sm font-bold px-3 py-1 rounded-full ${
+                      answer.isCorrect ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800'
                     }`}>
                       {answer.isCorrect ? '✓ Correct' : '✗ Incorrect'}
                     </span>
-                    <span className="text-sm text-gray-600">+{answer.points} pts</span>
+                    <span className="text-sm text-gray-600 font-semibold bg-white px-3 py-1 rounded-full">+{answer.points} pts</span>
                   </div>
                 </div>
                 
@@ -226,20 +241,21 @@ const ScoreDisplay: React.FC<ScoreDisplayProps> = ({ session, availableQuestions
         </div>
       </div>
 
+      {/* Action Buttons */}
       <div className="flex flex-col sm:flex-row gap-4 justify-center">
         <Button
           onClick={onRestart}
-          className="bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white px-8 py-3 rounded-lg font-semibold"
+          className="bg-gradient-to-r from-purple-500 via-pink-500 to-blue-500 hover:from-purple-600 hover:via-pink-600 hover:to-blue-600 text-white px-8 py-4 rounded-2xl font-bold shadow-lg transform hover:scale-105 transition-all duration-200"
         >
-          Take New Assessment
+          🚀 Take New Assessment
         </Button>
-        {percentage < 65 && (
+        {percentage < 60 && (
           <Button
             onClick={onRestart}
             variant="outline"
-            className="border-2 border-orange-500 text-orange-600 hover:bg-orange-50 px-8 py-3 rounded-lg font-semibold"
+            className="border-3 border-orange-400 text-orange-600 hover:bg-orange-50 px-8 py-4 rounded-2xl font-bold shadow-lg transform hover:scale-105 transition-all duration-200"
           >
-            Retake Assessment
+            🔄 Retake Assessment
           </Button>
         )}
       </div>
